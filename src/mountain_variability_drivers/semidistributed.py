@@ -78,18 +78,18 @@ class Semidistributed:
 
     @classmethod
     def from_dem_filepath(cls, dem_filepath: str, distributed_data_filepath: str, output_folder: str):
-        preprocess_topography(
+        output_dem_filepath, output_slope_filepath, output_aspect_filepath = preprocess_topography(
             input_dem_filepath=dem_filepath, distributed_data_filepath=distributed_data_filepath, output_folder=output_folder
         )
         return cls(
             SemidistributedConfig(
-                slope_map_path=f"{output_folder}/slope.nc",
-                aspect_map_path=f"{output_folder}/aspect.nc",
-                dem_path=f"{output_folder}/dem.nc",
+                slope_map_path=output_slope_filepath,
+                aspect_map_path=output_aspect_filepath,
+                dem_path=output_dem_filepath,
             )
         )
 
-    def stack_driver_data(self, distributed_data: xr.DataArray | xr.Dataset):
+    def stack_auxiliary_data(self, distributed_data: xr.DataArray | xr.Dataset):
         if self.config.slope_map_path is not None:
             slope_map = xr.open_dataarray(self.config.slope_map_path)
             dataset = distributed_data.assign(slope=slope_map)
@@ -103,13 +103,14 @@ class Semidistributed:
             dem_map = xr.open_dataarray(self.config.dem_path)
             dataset = dataset.assign(altitude=dem_map)
 
+        # Drop band dimension if rioxarray was used as engine
         if "band" in dataset.dims:
             dataset = dataset.sel(band=1).drop_vars("band")
 
         return dataset
 
     def prepare(self, distributed_data: xr.DataArray | xr.Dataset, analysis_bin_dict: Dict[str, BinGrouper]) -> xr.Dataset:
-        variable_and_auxiliary = self.stack_driver_data(distributed_data=distributed_data)
+        variable_and_auxiliary = self.stack_auxiliary_data(distributed_data=distributed_data)
         return variable_and_auxiliary.groupby_bins(analysis_bin_dict)
 
 

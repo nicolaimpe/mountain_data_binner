@@ -1,13 +1,48 @@
 import numpy as np
 import pytest
 import rasterio
-import rioxarray
 import xarray as xr
 from affine import Affine
 
-from mountain_variability_drivers.semidistributed import Semidistributed, SemidistributedConfig
+from mountain_variability_drivers.preprocessing import preprocess_topography
 
-"""Minimal representative example documented in test_preprocessing.py"""
+"""Minimal representative example
+
+DEM:
+x0,y0 = 0,7
+[[[0. 0. 0. 0. 0. 0. 0.]
+  [0. 0. 0. 0. 0. 0. 0.]
+  [0. 0. 0. 1. 0. 0. 0.]
+  [0. 0. 1. 2. 1. 0. 0.]
+  [0. 0. 0. 1. 0. 0. 0.]
+  [0. 0. 0. 0. 0. 0. 0.]
+  [0. 0. 0. 0. 0. 0. 0.]]]
+
+distributed data:
+same resolution, shift of 1 in c and y direction x0,y0 = 1,6
+
+DEM regridded on distributed data transform expected:
+
+[[[0. 0. 0. 0. 0.]
+  [0. 0. 1. 0. 0.]
+  [0. 1. 2. 1. 0.]
+  [0. 0. 1. 0. 0.]
+  [0. 0. 0. 0. 0.]]]
+
+Slope map generated from regridded DEM expected [°]:
+[[[-9999.      -9999.      -9999.      -9999.      -9999.     ]
+  [-9999.         35.26439    45.         35.26439 -9999.     ]
+  [-9999.         45.          0.         45.      -9999.     ]
+  [-9999.         35.26439    45.         35.26439 -9999.     ]
+  [-9999.      -9999.      -9999.      -9999.      -9999.     ]]]
+
+Aspect map generated from regridded DEM expected [°]
+[[[-9999. -9999. -9999. -9999. -9999.]
+  [-9999.   315.     0.    45. -9999.]
+  [-9999.   270. -9999.    90. -9999.]
+  [-9999.   225.   180.   135. -9999.]
+  [-9999. -9999. -9999. -9999. -9999.]]]
+"""
 
 
 @pytest.fixture(scope="session")
@@ -74,8 +109,7 @@ def test_distributed_data_file(tmp_path_factory):
     return file_name
 
 
-# contents of test_image.py
-def test_semidistributed_init_methods(
+def test_preprocess_topography(
     test_dem_file,
     test_dem_file_regrid_true,
     test_slope_file_true,
@@ -83,25 +117,21 @@ def test_semidistributed_init_methods(
     test_distributed_data_file,
     tmp_path_factory,
 ):
-    semidistributed_from_config = Semidistributed(
-        SemidistributedConfig(
-            slope_map_path=test_slope_file_true, dem_path=test_dem_file_regrid_true, aspect_map_path=test_aspect_file_true
-        )
-    )
-    semidistributed_from_dem = Semidistributed.from_dem_filepath(
-        dem_filepath=test_dem_file,
+    regrid_dem, regrid_slope, regrid_aspect = preprocess_topography(
+        input_dem_filepath=test_dem_file,
         distributed_data_filepath=test_distributed_data_file,
         output_folder=tmp_path_factory.mktemp("data"),
     )
 
-    assert xr.open_dataarray(semidistributed_from_config.config.dem_path, engine="rasterio").equals(
-        xr.open_dataarray(semidistributed_from_dem.config.dem_path, engine="rasterio")
+    assert np.array_equal(
+        xr.open_dataarray(regrid_dem, engine="rasterio").values, rasterio.open(test_dem_file_regrid_true).read()
     )
-    print(xr.open_dataarray(semidistributed_from_config.config.slope_map_path, engine="rasterio").coords)
-    print(rioxarray.open_rasterio(semidistributed_from_dem.config.slope_map_path, engine="rasterio").coords)
-    assert xr.open_dataarray(semidistributed_from_config.config.slope_map_path, engine="rasterio").equals(
-        xr.open_dataarray(semidistributed_from_dem.config.slope_map_path, engine="rasterio")
+
+    assert np.array_equal(
+        xr.open_dataarray(regrid_slope, engine="rasterio", mask_and_scale=False).values,
+        rasterio.open(test_slope_file_true).read(),
     )
-    assert xr.open_dataarray(semidistributed_from_config.config.aspect_map_path, engine="rasterio").equals(
-        xr.open_dataarray(semidistributed_from_dem.config.aspect_map_path, engine="rasterio")
+    assert np.array_equal(
+        xr.open_dataarray(regrid_aspect, engine="rasterio", mask_and_scale=False).values,
+        rasterio.open(test_aspect_file_true).read(),
     )

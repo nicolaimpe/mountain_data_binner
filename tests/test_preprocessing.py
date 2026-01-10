@@ -4,7 +4,7 @@ import rasterio
 import xarray as xr
 from affine import Affine
 
-from mountain_variability_drivers.preprocessing import preprocess_topography
+from mountain_data_binner.preprocessing import preprocess, preprocess_topography
 
 """Minimal representative example
 
@@ -18,6 +18,16 @@ x0,y0 = 0,7
   [0. 0. 0. 0. 0. 0. 0.]
   [0. 0. 0. 0. 0. 0. 0.]]]
 
+Forest mask:
+x0,y0 = 0,7
+[[[0. 0. 1. 1. 0. 0. 0.]
+  [0. 0. 1. 1. 0. 0. 0.]
+  [0. 0. 1. 1. 0. 0. 0.]
+  [0. 0. 1. 1. 0. 0. 0.]
+  [0. 0. 1. 1. 0. 0. 0.]
+  [0. 0. 1. 1. 0. 0. 0.]
+  [0. 0. 1. 1. 0. 0. 0.]]]
+
 distributed data:
 same resolution, shift of 1 in c and y direction x0,y0 = 1,6
 
@@ -28,6 +38,13 @@ DEM regridded on distributed data transform expected:
   [0. 1. 2. 1. 0.]
   [0. 0. 1. 0. 0.]
   [0. 0. 0. 0. 0.]]]
+
+Forest mask egridded on distributed data transform expected:
+[[[0. 1. 1. 0. 0.]
+  [0. 1. 1. 0. 0.]
+  [0. 1. 1. 0. 0.]
+  [0. 1. 1. 0. 0.]
+  [0. 1. 1. 0. 0.]]]
 
 Slope map generated from regridded DEM expected [°]:
 [[[-9999.      -9999.      -9999.      -9999.      -9999.     ]
@@ -49,6 +66,18 @@ Aspect map generated from regridded DEM expected [°]
 def test_dem_file(tmp_path_factory):
     dem_data = np.pad(np.array([[0, 1, 0], [1, 2, 1], [0, 1, 0]]), pad_width=2)
     file_name = tmp_path_factory.mktemp("data") / "dem.tif"
+    transform = Affine(1, 0, 0, 0, -1, 7)
+    with rasterio.open(
+        file_name, "w", width=7, height=7, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
+    ) as dst:
+        dst.write(dem_data, 1)
+    return file_name
+
+
+@pytest.fixture(scope="session")
+def test_forest_mask_file(tmp_path_factory):
+    dem_data = np.pad(np.array([[1, 1, 0], [1, 1, 0], [1, 1, 0]]), pad_width=2)
+    file_name = tmp_path_factory.mktemp("data") / "forest_mask.tif"
     transform = Affine(1, 0, 0, 0, -1, 7)
     with rasterio.open(
         file_name, "w", width=7, height=7, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
@@ -98,6 +127,19 @@ def test_aspect_file_true(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
+def test_forest_mask_file_true(tmp_path_factory):
+    aspect_data = np.pad(np.array([[1, 1, 0], [1, 1, 0], [1, 1, 0]]), pad_width=1, constant_values=0)
+
+    file_name = tmp_path_factory.mktemp("data") / "forest_mask_regrid_true.tif"
+    transform = Affine(1, 0, 1, 0, -1, 6)
+    with rasterio.open(
+        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
+    ) as dst:
+        dst.write(aspect_data, 1)
+    return file_name
+
+
+@pytest.fixture(scope="session")
 def test_distributed_data_file(tmp_path_factory):
     distributed_data = np.ones(shape=(5, 5))
     file_name = tmp_path_factory.mktemp("data") / "distributed.tif"
@@ -134,4 +176,23 @@ def test_preprocess_topography(
     assert np.array_equal(
         xr.open_dataarray(regrid_aspect, engine="rasterio", mask_and_scale=False).values,
         rasterio.open(test_aspect_file_true).read(),
+    )
+
+
+def test_preprocess(
+    test_dem_file,
+    test_forest_mask_file,
+    test_distributed_data_file,
+    test_forest_mask_file_true,
+    tmp_path_factory,
+):
+    _, _, _, regrid_forest_mask = preprocess(
+        input_dem_filepath=test_dem_file,
+        forest_mask_filepath=test_forest_mask_file,
+        distributed_data_filepath=test_distributed_data_file,
+        output_folder=tmp_path_factory.mktemp("data"),
+    )
+
+    assert np.array_equal(
+        xr.open_dataarray(regrid_forest_mask, engine="rasterio").values, rasterio.open(test_forest_mask_file_true).read()
     )

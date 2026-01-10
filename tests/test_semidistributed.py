@@ -134,11 +134,16 @@ def test_semidistributed_defaults_bins(test_dem_file, test_distributed_data_file
         assert result.sel(aspect_bins=aspect).sum() == 1
 
 
-def test_semidistributed_user_bins(test_dem_file, test_distributed_data_file, tmp_path_factory):
-    semidistributed = Semidistributed.from_dem_filepath(
-        dem_filepath=test_dem_file,
-        distributed_data_filepath=test_distributed_data_file,
-        output_folder=tmp_path_factory.mktemp("data"),
+def test_semidistributed_user_bins(
+    test_dem_file_regrid_true, test_distributed_data_file, test_slope_file_true, test_aspect_file_true
+):
+    semidistributed = Semidistributed(
+        SemidistributedConfig(
+            slope_map_path=test_slope_file_true,
+            dem_path=test_dem_file_regrid_true,
+            aspect_map_path=test_aspect_file_true,
+            regular_8_aspects=False,
+        )
     )
     distributed_data = xr.Dataset({"test_data": xr.open_dataarray(test_distributed_data_file)})
     with pytest.raises(SemidistributedError):
@@ -157,7 +162,6 @@ def test_semidistributed_user_bins(test_dem_file, test_distributed_data_file, tm
         distributed_data=distributed_data,
         analysis_bin_dict=user_created_bins,
         function=sum_data_array,
-        regular_8_aspects_bins=False,
     )
     # Summit point slope=0, altitude=2 doesn't have a defined aspect (very special case)
     # So we cannot test it here
@@ -170,6 +174,10 @@ def test_semidistributed_user_bins(test_dem_file, test_distributed_data_file, tm
     assert result.sel(aspect_bins="0 - 90").sum() == 2
     assert result.sel(aspect_min=90).sum() == 2
     assert result.sel(aspect_max=270).sum() == 2
+    assert result.sel(aspect_min=slice(180, None)).sum() == 4
+    assert result.sel(aspect_max=slice(None, 180)).sum() == 4
+    assert result.sel(aspect_min=slice(180, None)).sum() == 4
+    assert result.sel(aspect_max=slice(None, 180)).sum() == 4
     assert result.sel(aspect_min=slice(180, None)).sum() == 4
     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
     assert result.sel(aspect_min=slice(180, None)).sum() == 4

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Self
+from typing import Callable, Dict, List
 
 import numpy as np
 import xarray as xr
@@ -205,7 +205,7 @@ class MountainBinner:
     @classmethod
     def from_dem_and_forest_mask_filepath(
         cls, dem_filepath: str, forest_mask_filepath: str, distributed_data_filepath: str, output_folder: str
-    ) -> Self:
+    ):
         """Default initialization of Mountain binner object. It takes care of preprocessing data.
 
         Args:
@@ -215,7 +215,7 @@ class MountainBinner:
             output_folder (str): path to a folder that stores the regridded DEM, the slope and aspect map.
 
         Returns:
-            Self: a MountainBinner object
+            : a MountainBinner object
         """
         output_dem_filepath, output_slope_filepath, output_aspect_filepath, output_forest_mask_filepath = preprocess(
             input_dem_filepath=dem_filepath,

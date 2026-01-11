@@ -68,7 +68,7 @@ def test_dem_file(tmp_path_factory):
     file_name = tmp_path_factory.mktemp("data") / "dem.tif"
     transform = Affine(1, 0, 0, 0, -1, 7)
     with rasterio.open(
-        file_name, "w", width=7, height=7, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
+        file_name, "w", width=7, height=7, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:3857"
     ) as dst:
         dst.write(dem_data, 1)
     return file_name
@@ -80,7 +80,7 @@ def test_forest_mask_file(tmp_path_factory):
     file_name = tmp_path_factory.mktemp("data") / "forest_mask.tif"
     transform = Affine(1, 0, 0, 0, -1, 7)
     with rasterio.open(
-        file_name, "w", width=7, height=7, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
+        file_name, "w", width=7, height=7, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:3857"
     ) as dst:
         dst.write(dem_data, 1)
     return file_name
@@ -92,7 +92,7 @@ def test_dem_file_regrid_true(tmp_path_factory):
     file_name = tmp_path_factory.mktemp("data") / "dem_regrid_true.tif"
     transform = Affine(1, 0, 1, 0, -1, 6)
     with rasterio.open(
-        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
+        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:3857"
     ) as dst:
         dst.write(dem_regrid_data, 1)
     return file_name
@@ -107,7 +107,7 @@ def test_slope_file_true(tmp_path_factory):
     file_name = tmp_path_factory.mktemp("data") / "slope_true.tif"
     transform = Affine(1, 0, 1, 0, -1, 6)
     with rasterio.open(
-        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
+        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:3857"
     ) as dst:
         dst.write(slope_data, 1)
     return file_name
@@ -120,7 +120,7 @@ def test_aspect_file_true(tmp_path_factory):
     file_name = tmp_path_factory.mktemp("data") / "aspect_true.tif"
     transform = Affine(1, 0, 1, 0, -1, 6)
     with rasterio.open(
-        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
+        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:3857"
     ) as dst:
         dst.write(aspect_data, 1)
     return file_name
@@ -133,7 +133,7 @@ def test_forest_mask_file_true(tmp_path_factory):
     file_name = tmp_path_factory.mktemp("data") / "forest_mask_regrid_true.tif"
     transform = Affine(1, 0, 1, 0, -1, 6)
     with rasterio.open(
-        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
+        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:3857"
     ) as dst:
         dst.write(aspect_data, 1)
     return file_name
@@ -145,7 +145,7 @@ def test_distributed_data_file(tmp_path_factory):
     file_name = tmp_path_factory.mktemp("data") / "distributed.tif"
     transform = Affine(1, 0, 1, 0, -1, 6)
     with rasterio.open(
-        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:4326"
+        file_name, "w", width=5, height=5, count=1, dtype=np.float32, nodata=-9999, transform=transform, crs="EPSG:3857"
     ) as dst:
         dst.write(distributed_data, 1)
     return file_name

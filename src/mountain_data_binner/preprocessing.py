@@ -15,7 +15,10 @@ logging.basicConfig(level=logging.INFO)
 
 def slope_map_gdal(input_file: str, output_file: str) -> xr.DataArray:
     """Wrap-up GDAL command to generate a slope map. See scripts/process_mnt.sh for the GDAL routine."""
-    os.system(f"gdaldem slope -alg ZevenbergenThorne {input_file} {output_file}")
+    if rioxarray.open_rasterio(input_file).rio.crs.is_geographic:
+        os.system(f"gdaldem slope -alg ZevenbergenThorne -s 111120 {input_file} {output_file}")
+    else:
+        os.system(f"gdaldem slope -alg ZevenbergenThorne  {input_file} {output_file}")
 
 
 def aspect_map_gdal(input_file: str, output_file: str) -> xr.DataArray:
@@ -94,9 +97,9 @@ def preprocess(
         input_dem_filepath=input_dem_filepath, distributed_data_filepath=distributed_data_filepath, output_folder=output_folder
     )
     logger.info("Opening distributed dataset un target geometry")
-    distributed_data = xr.open_dataset(distributed_data_filepath)
+    distributed_data = xr.open_dataset(distributed_data_filepath, engine="rasterio")
     logger.info("Opening forest mask data")
-    input_forest_mask_data = xr.open_dataset(forest_mask_filepath)
+    input_forest_mask_data = xr.open_dataset(forest_mask_filepath, engine="rasterio")
     resampled_forest_mask = input_forest_mask_data.rio.reproject_match(distributed_data, resampling=Resampling.lanczos)
     output_forest_mask_filepath = f"{output_folder}/forest_mask.tif"
     # Need to save this using rasterio to export a GeoTiff as GDAL would do in order to be consistent with slope and aspect maps

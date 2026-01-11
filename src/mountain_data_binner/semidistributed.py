@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Self
+from typing import Dict
 
 import numpy as np
 from xarray.groupers import BinGrouper
@@ -54,7 +54,7 @@ class Semidistributed(MountainBinner):
         )
 
     @classmethod
-    def from_dem_filepath(cls, dem_filepath: str, distributed_data_filepath: str, output_folder: str) -> Self:
+    def from_dem_filepath(cls, dem_filepath: str, distributed_data_filepath: str, output_folder: str):
         """Default initialization of Semidistributed object. It takes care of preprocessing data.
 
         Args:
@@ -63,7 +63,7 @@ class Semidistributed(MountainBinner):
             output_folder (str): path to a folder that stores the regridded DEM, the slope and aspect map.
 
         Returns:
-            Self: a Semidistributed object
+            : a Semidistributed object
         """
         output_dem_filepath, output_slope_filepath, output_aspect_filepath = preprocess_topography(
             input_dem_filepath=dem_filepath, distributed_data_filepath=distributed_data_filepath, output_folder=output_folder

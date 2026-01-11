@@ -5,7 +5,7 @@ import rioxarray
 import xarray as xr
 from affine import Affine
 
-from mountain_data_binner.mountain_binner import MountainBinner, MountainBinnerConfig
+from mountain_data_binner.mountain_binner import MountainBinner, MountainBinnerConfig, MountainBinnerError
 
 """Minimal representative example documented in test_preprocessing.py"""
 
@@ -149,57 +149,53 @@ def test_mountain_binner_defaults_bins(test_dem_file, test_forest_mask_file, tes
     )
     # Summit point slope=0, altitude=2 doesn't have a defined aspect (very special case)
     # So we cannot test it here
-    print(result)
-    assert False
+    assert result.sel(slope_min=30, landcover="forest").sum() == 5
+    assert result.sel(slope_min=30, landcover="open").sum() == 3
+    assert result.sel(aspect="N", landcover="forest").sum() == 1
+    assert result.sel(aspect="N", landcover="open").sum() == 0
+    assert result.sel(altitude_min=0, landcover="open", aspect="SE").sum() == 1
+    assert result.sel(altitude_min=1, landcover="forest", aspect="W").sum() == 1
 
 
-# def test_semidistributed_user_bins(
-#     test_dem_file_regrid_true, test_distributed_data_file, test_slope_file_true, test_aspect_file_true
-# ):
-#     semidistributed = Semidistributed(
-#         SemidistributedConfig(
-#             slope_map_path=test_slope_file_true,
-#             dem_path=test_dem_file_regrid_true,
-#             aspect_map_path=test_aspect_file_true,
-#             regular_8_aspects=False,
-#         )
-#     )
-#     distributed_data = xr.Dataset({"test_data": xr.open_dataarray(test_distributed_data_file)})
-#     with pytest.raises(SemidistributedError):
-#         user_created_bins = Semidistributed.create_user_bin_dict(
-#             slope_edges=np.arange(0, 60, 10),
-#             aspect_edges=np.arange(0, 361, 90),
-#             altitude_edges=np.arange(-2, 5, 2),  # Altitude of -2
-#         )
-#     user_created_bins = Semidistributed.create_user_bin_dict(
-#         slope_edges=np.arange(0, 60, 10),
-#         aspect_edges=np.arange(0, 361, 90),
-#         altitude_edges=np.arange(0, 5, 2),
-#     )
+def test_mountain_binner_user_bins(
+    test_dem_file_regrid_true,
+    test_distributed_data_file,
+    test_slope_file_true,
+    test_aspect_file_true,
+    test_forest_mask_file_true,
+):
+    semidistributed = MountainBinner(
+        MountainBinnerConfig(
+            slope_map_path=test_slope_file_true,
+            dem_path=test_dem_file_regrid_true,
+            aspect_map_path=test_aspect_file_true,
+            regular_8_aspects=False,
+            forest_mask_path=test_forest_mask_file_true,
+        )
+    )
+    distributed_data = xr.Dataset({"test_data": xr.open_dataarray(test_distributed_data_file)})
+    with pytest.raises(MountainBinnerError):
+        user_created_bins = MountainBinner.create_user_bin_dict(
+            slope_edges=np.arange(0, 60, 10),
+            aspect_edges=np.arange(0, 361, 90),
+            altitude_edges=np.arange(-2, 5, 2),  # Altitude of -2
+            landcover_classes=[0, 1],
+        )
+    user_created_bins = MountainBinner.create_user_bin_dict(
+        slope_edges=np.arange(0, 60, 10),
+        aspect_edges=np.arange(0, 361, 90),
+        altitude_edges=np.arange(0, 5, 2),
+        landcover_classes=np.array([1, 0]),
+    )
 
-#     result = semidistributed.transform(
-#         distributed_data=distributed_data,
-#         analysis_bin_dict=user_created_bins,
-#         function=sum_data_array,
-#     )
-#     # Summit point slope=0, altitude=2 doesn't have a defined aspect (very special case)
-#     # So we cannot test it here
-#     assert result.sel(slope_min=0).sum() == 0
-#     assert result.sel(slope_max=30).sum() == 0
-#     assert result.sel(slope_bins="30 - 40").sum() == 4
-#     assert result.sel(slope_max=50).sum() == 4
-#     assert result.sel(altitude_bins="0 - 2").sum() == 8
-#     assert result.sel(altitude_max=4).sum() == 0
-#     assert result.sel(aspect_bins="0 - 90").sum() == 2
-#     assert result.sel(aspect_min=90).sum() == 2
-#     assert result.sel(aspect_max=270).sum() == 2
-#     assert result.sel(aspect_min=slice(180, None)).sum() == 4
-#     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-#     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-#     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-#     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-#     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-#     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-#     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-#     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-#     assert result.sel(aspect_max=slice(None, 180)).sum() == 4
+    result = semidistributed.transform(
+        distributed_data=distributed_data,
+        analysis_bin_dict=user_created_bins,
+        function=sum_data_array,
+    )
+    # Summit point slope=0, altitude=2 doesn't have a defined aspect (very special case)
+    # So we cannot test it here
+    assert result.sel(landcover=0, altitude_bins="0 - 2").sum() == 3
+    assert result.sel(landcover=1, slope_min=30, aspect_min=slice(180, None)).sum() == 2
+    assert result.sel(landcover=1, slope_min=40, aspect_min=slice(180, None)).sum() == 2
+    assert result.sel(landcover=0, slope_bins=["30 - 40", "40 - 50"], aspect_min=slice(None, 180)).sum() == 3

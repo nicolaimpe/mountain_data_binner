@@ -3,7 +3,7 @@ from typing import Callable, Dict, List
 
 import numpy as np
 import xarray as xr
-from xarray.groupers import BinGrouper
+from xarray.groupers import BinGrouper, UniqueGrouper
 
 from mountain_data_binner.preprocessing import preprocess
 
@@ -74,7 +74,7 @@ class MountainBinner:
 
     @staticmethod
     def forest_mask_bins() -> BinGrouper:
-        return BinGrouper([0, 1, 2], labels=["forest", "open"], include_lowest=True, right=False)
+        return BinGrouper([0, 1, 2], labels=["open", "forest"], include_lowest=True, right=False)
 
     @staticmethod
     def altitude_bands(altitude_step: int = 300, altitude_min: int = 0, altitude_max: int = 4800) -> BinGrouper:
@@ -119,11 +119,20 @@ class MountainBinner:
             raise MountainBinnerError(
                 f"Negative altitudes and slopes not supported. Your altitude {altitude_edges}. Your slopes {slope_edges}"
             )
+        landcover_classes_sorted = np.sort(landcover_classes)
         return dict(
             slope=MountainBinner.user_bins(bin_edges=slope_edges),
             aspect=MountainBinner.user_bins(bin_edges=aspect_edges),
             altitude=MountainBinner.user_bins(bin_edges=altitude_edges),
-            forest_mask=MountainBinner.user_bins(bin_edges=landcover_classes),
+            # landcover classes are defined on a bin whose lowest values correspond to the discrete value of the class
+            # we need to define an extra bin edge for the last class in order to keep the bin definition
+            # this way is should be transparent to users
+            forest_mask=BinGrouper(
+                bins=np.array([*landcover_classes_sorted, landcover_classes_sorted[-1] + 1]),
+                labels=landcover_classes_sorted,
+                include_lowest=True,
+                right=False,
+            ),
         )
 
     @classmethod
@@ -187,11 +196,14 @@ class MountainBinner:
             sd = sd.assign_coords(slope_max=("slope_bins", self.bins_max(sd, "slope_bins")))
             sd = sd.set_xindex("slope_min")
             sd = sd.set_xindex("slope_max")
-        if self.config.aspect_map_path and not self.config.regular_8_aspects:
-            sd = sd.assign_coords(aspect_min=("aspect_bins", self.bins_min(sd, "aspect_bins")))
-            sd = sd.assign_coords(aspect_max=("aspect_bins", self.bins_max(sd, "aspect_bins")))
-            sd = sd.set_xindex("aspect_min")
-            sd = sd.set_xindex("aspect_max")
+        if self.config.aspect_map_path:
+            if not self.config.regular_8_aspects:
+                sd = sd.assign_coords(aspect_min=("aspect_bins", self.bins_min(sd, "aspect_bins")))
+                sd = sd.assign_coords(aspect_max=("aspect_bins", self.bins_max(sd, "aspect_bins")))
+                sd = sd.set_xindex("aspect_min")
+                sd = sd.set_xindex("aspect_max")
+            else:
+                sd = sd.rename({"aspect_bins": "aspect"})
         if self.config.forest_mask_path:
             sd = sd.rename({"forest_mask_bins": "landcover"})
         return sd

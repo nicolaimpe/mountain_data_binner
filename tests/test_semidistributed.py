@@ -131,7 +131,7 @@ def test_semidistributed_defaults_bins(test_dem_file, test_distributed_data_file
     assert result.sel(altitude_bins="0 - 1").sum() == 4
     assert result.sel(altitude_min=1).sum() == 4
     for aspect in ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]:
-        assert result.sel(aspect_bins=aspect).sum() == 1
+        assert result.sel(aspect=aspect).sum() == 1
 
 
 def test_semidistributed_user_bins(
@@ -174,11 +174,5 @@ def test_semidistributed_user_bins(
     assert result.sel(aspect_bins="0 - 90").sum() == 2
     assert result.sel(aspect_min=90).sum() == 2
     assert result.sel(aspect_max=270).sum() == 2
-    assert result.sel(aspect_min=slice(180, None)).sum() == 4
-    assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-    assert result.sel(aspect_min=slice(180, None)).sum() == 4
-    assert result.sel(aspect_max=slice(None, 180)).sum() == 4
-    assert result.sel(aspect_min=slice(180, None)).sum() == 4
-    assert result.sel(aspect_max=slice(None, 180)).sum() == 4
     assert result.sel(aspect_min=slice(180, None)).sum() == 4
     assert result.sel(aspect_max=slice(None, 180)).sum() == 4

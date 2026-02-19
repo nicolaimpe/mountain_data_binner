@@ -153,6 +153,23 @@ class MountainBinner:
             forest_mask=MountainBinner.forest_mask_bins(),
         )
 
+    def create_default_bin_dict_from_config(self, altitude_step: int = 300, altitude_max: int = 4801) -> Dict[str, BinGrouper]:
+        """Create bins for topographic chracterization in semidistributed and forest but allow to keep only configurated dims.
+
+        Match S2M [1]."""
+        output_bin_dict = {}
+        if self.config.slope_map_path is not None:
+            output_bin_dict.update(slope=MountainBinner.default_slope_bands())
+        if self.config.aspect_map_path is not None:
+            output_bin_dict.update(aspect=MountainBinner.regular_8_aspect_bins())
+        if self.config.dem_path is not None:
+            output_bin_dict.update(
+                altitude=MountainBinner.altitude_bands(altitude_step=altitude_step, altitude_max=altitude_max)
+            )
+        if self.config.forest_mask_path is not None:
+            output_bin_dict.update(forest_mask=MountainBinner.forest_mask_bins())
+        return output_bin_dict
+
     def create_user_bin_dict(
         self,
         slope_edges: np.ndarray | None = None,

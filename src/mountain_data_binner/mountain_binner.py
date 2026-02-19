@@ -246,27 +246,27 @@ class MountainBinner:
         """
         if self.config.slope_map_path is not None:
             slope_map = xr.open_dataarray(self.config.slope_map_path)
-            dataset = distributed_data.assign(slope=slope_map)
+            distributed_data = distributed_data.assign(slope=slope_map)
 
         if self.config.aspect_map_path is not None:
             aspect_map = xr.open_dataarray(self.config.aspect_map_path)
             if self.config.regular_8_aspects:
                 aspect_map = MountainBinner.aspect_map_transform(aspect_map)
-            dataset = dataset.assign(aspect=aspect_map)
+            distributed_data = distributed_data.assign(aspect=aspect_map)
 
         if self.config.dem_path is not None:
             dem_map = xr.open_dataarray(self.config.dem_path)
-            dataset = dataset.assign(altitude=dem_map)
+            distributed_data = distributed_data.assign(altitude=dem_map)
 
         if self.config.forest_mask_path is not None:
             forest_mask = xr.open_dataarray(self.config.forest_mask_path)
-            dataset = dataset.assign(forest_mask=forest_mask)
+            distributed_data = distributed_data.assign(forest_mask=forest_mask)
 
         # Drop band dimension if rioxarray was used as engine
-        if "band" in dataset.dims:
-            dataset = dataset.sel(band=1).drop_vars("band")
+        if "band" in distributed_data.dims:
+            distributed_data = distributed_data.sel(band=1).drop_vars("band")
 
-        return dataset
+        return distributed_data
 
     def prepare(self, distributed_data: xr.DataArray | xr.Dataset, bin_dict: Dict[str, BinGrouper]):
         """Use groupby to prepare binning.
